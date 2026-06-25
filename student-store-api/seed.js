@@ -7,55 +7,85 @@ async function seed() {
   try {
     console.log('🌱 Seeding database...\n')
 
-    // Clear existing data (in order due to relations)
+    // Clear existing data (in order due to foreign key constraints)
     await prisma.orderItem.deleteMany()
     await prisma.order.deleteMany()
     await prisma.product.deleteMany()
 
-    // Load JSON data
+    // Load products from JSON file
     const productsData = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../data/products.json'), 'utf8')
+      fs.readFileSync(path.join(__dirname, 'data/products.json'), 'utf8')
     )
 
-    const ordersData = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../data/orders.json'), 'utf8')
-    )
-
-    // Seed products
+    // Seed products and store them for reference
+    const createdProducts = []
     for (const product of productsData.products) {
-      await prisma.product.create({
+      const created = await prisma.product.create({
         data: {
           name: product.name,
-          description: product.description,
-          price: product.price,
-          imageUrl: product.image_url,
           category: product.category,
-        },
+          image: product.image_url,
+          description: product.description,
+          price: product.price
+        }
       })
+      createdProducts.push(created)
+      console.log(`✅ Created product: ${product.name}`)
     }
 
-    // Seed orders and items
-    for (const order of ordersData.orders) {
+    // Load orders from JSON file
+    const ordersData = JSON.parse(
+      fs.readFileSync(path.join(__dirname, 'data/orders.json'), 'utf8')
+    )
+
+    // Map customer IDs to names/emails (since JSON only has IDs)
+    const customerMap = {
+      101: { name: "John Doe", email: "john@example.com" },
+      102: { name: "Jane Smith", email: "jane@example.com" }
+    }
+
+    // Seed orders with their items from JSON
+    for (const orderData of ordersData.orders) {
+      const customer = customerMap[orderData.customer_id] || {
+        name: `Customer ${orderData.customer_id}`,
+        email: `customer${orderData.customer_id}@example.com`
+      }
+
+      // Build items data
+      const itemsData = []
+      for (const item of orderData.items) {
+        // Find product by matching JSON product_id to created products index
+        const product = createdProducts[item.product_id - 1]
+
+        if (product) {
+          itemsData.push({
+            productId: product.id,
+            quantity: item.quantity,
+            price: item.price
+          })
+        }
+      }
+
+      // Create order with nested items
       const createdOrder = await prisma.order.create({
         data: {
-          customer: order.customer_id,
-          totalPrice: order.total_price,
-          status: order.status,
-          createdAt: new Date(order.created_at),
-          orderItems: {
-            create: order.items.map((item) => ({
-              productId: item.product_id,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-          },
+          customerName: customer.name,
+          customerEmail: customer.email,
+          status: orderData.status,
+          total: orderData.total_price,
+          items: {
+            create: itemsData
+          }
         },
+        include: {
+          items: true
+        }
       })
 
-      console.log(`✅ Created order #${createdOrder.id}`)
+      console.log(`✅ Created order #${createdOrder.id} for: ${customer.name} with ${createdOrder.items.length} items`)
     }
 
-    console.log('\n🎉 Seeding complete!')
+    console.log(`\n🎉 Seeding complete! Added ${createdProducts.length} products and ${ordersData.orders.length} orders with their order items.`)
   } catch (err) {
     console.error('❌ Error seeding:', err)
   } finally {

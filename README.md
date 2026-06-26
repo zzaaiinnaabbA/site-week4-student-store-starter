@@ -68,6 +68,15 @@ Deployed Application (optional): [Student Store Deployed Site](ADD_LINK_HERE)
     - [X] Demonstrate that users can successfully add items to their shopping cart, delete items from their shopping cart, and place an order
     - [X] After placing an order use Postman or Prisma Studio demonstrate that a corresponding order has been created in your orders table.
 
+#### REQUIRED DOCUMENTATION (UPDATED)
+
+- [X] **planning.md File** *(updated)*
+  - [X] Includes complete data models documentation for Products, Orders, and Order Items with field types and cascade delete behavior
+  - [X] Documents all API endpoints with request/response formats, including GET /products query parameters and default behaviors
+  - [X] Contains Transactional Flow section detailing POST /orders process with validation, atomicity, and error handling
+  - [X] Includes Decisions Log tracking implementation changes and rationale for Milestones 1 and 5
+  - [X] Contains Spec Reconciliation section comparing implemented models/endpoints against original specifications
+
 ### Stretch Features
 
 - [ ] **Added Endpoints**
